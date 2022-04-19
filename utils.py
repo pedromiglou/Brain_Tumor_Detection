@@ -8,42 +8,100 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.utils import shuffle #shuffling the data improves the model
 from sklearn.model_selection import train_test_split
+import tensorflow as tf
 
 
-def read_data(IMG_SIZE=224, color=False):
+def read_images():
     yes_dir = 'brain_tumor_dataset/yes'
     no_dir = 'brain_tumor_dataset/no'
-    data = []
-    
-    if color:
-        flag = cv2.IMREAD_COLOR
-    else:
-        flag = cv2.IMREAD_GRAYSCALE
+    images = []
+    labels = []
     
     for filename in glob.iglob(f'{yes_dir}/*'):
-        img_array = cv2.imread(filename, flag)
-        
-        #resize to be smaller to have less data
-        new_array = cv2.resize(img_array, (IMG_SIZE, IMG_SIZE))
+        img_array = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
 
-        #normalize data
-        new_array = new_array/255.0
-
-        data.append([new_array, 1])
+        images.append(img_array)
+        labels.append(1)
     
     for filename in glob.iglob(f'{no_dir}/*'):
-        img_array = cv2.imread(filename, flag)
+        img_array = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
+
+        images.append(img_array)
+        labels.append(0)
+
+    return np.array(images), np.array(labels)
+
+
+def crop_images(images):
+    new_images = []
+    
+    for image in images:
+        # blur the image slightly
+        blurred = cv2.GaussianBlur(image, (5, 5), 0)
+
+        thresh = cv2.threshold(blurred, 45, 255, cv2.THRESH_BINARY)[1]
+        thresh = cv2.erode(thresh, None, iterations=2)
+        thresh = cv2.dilate(thresh, None, iterations=2)
+
+        # Find contours in thresholded image, then grab the largest one
+        cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = imutils.grab_contours(cnts)
+        c = max(cnts, key=cv2.contourArea)
         
+        # extreme points
+        extLeft = tuple(c[c[:, :, 0].argmin()][0])
+        extRight = tuple(c[c[:, :, 0].argmax()][0])
+        extTop = tuple(c[c[:, :, 1].argmin()][0])
+        extBot = tuple(c[c[:, :, 1].argmax()][0])
+
+        # crop new image out of the original image using the four extreme points (left, right, top, bottom)
+        new_image = image[extTop[1]:extBot[1], extLeft[0]:extRight[0]]
+    
+        new_images.append(new_image)
+    
+    return np.array(new_images)
+
+
+def resize_and_rescale(images, IMG_SIZE=224):    
+    new_images = []
+
+    for image in images:
         #resize to be smaller to have less data
-        new_array = cv2.resize(img_array, (IMG_SIZE, IMG_SIZE))
+        new_image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
 
         #normalize data
-        new_array = new_array/255.0
+        new_image = new_image/255.0
+    
+        new_images.append(new_image)
+    
+    return np.array(new_images)
 
-        data.append([new_array, 0])
 
-    return data
+def split_data(X, y, test_size=0.2):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
 
+    return X_train, y_train, X_test, y_test
+
+def augment_data(X,y):
+    data_augmentation = tf.keras.Sequential([
+      tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
+      tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
+    ])
+    
+    new_images = []
+    new_labels = []
+    
+    for image, label in zip(X,y):
+        new_images.append(image)
+        new_labels.append(label)
+        
+        new_images.append(np.reshape(data_augmentation(tf.expand_dims(X[0], 0)), (224,224)))
+        new_labels.append(label)
+    
+    return np.array(new_images), np.array(new_labels) 
+
+
+"""
 def augment_data(file_dir, n_generated_samples, save_to_dir):
     data_gen = ImageDataGenerator(rotation_range=10, 
                                   width_shift_range=0.1, 
@@ -67,42 +125,7 @@ def augment_data(file_dir, n_generated_samples, save_to_dir):
                     break
 
 
-def crop_brain_contour(image, plot=False):
-    
-    # Convert the image to grayscale, and blur it slightly
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    
-    thresh = cv2.threshold(gray, 45, 255, cv2.THRESH_BINARY)[1]
-    thresh = cv2.erode(thresh, None, iterations=2)
-    thresh = cv2.dilate(thresh, None, iterations=2)
 
-    # Find contours in thresholded image, then grab the largest one
-    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = imutils.grab_contours(cnts)
-    c = max(cnts, key=cv2.contourArea)
-    # extreme points
-    extLeft = tuple(c[c[:, :, 0].argmin()][0])
-    extRight = tuple(c[c[:, :, 0].argmax()][0])
-    extTop = tuple(c[c[:, :, 1].argmin()][0])
-    extBot = tuple(c[c[:, :, 1].argmax()][0])
-    
-    # crop new image out of the original image using the four extreme points (left, right, top, bottom)
-    new_image = image[extTop[1]:extBot[1], extLeft[0]:extRight[0]]            
-
-    if plot:
-        plt.figure()
-        plt.subplot(1, 2, 1)
-        plt.imshow(image)
-        plt.tick_params(axis='both', which='both', top=False, bottom=False, left=False, right=False,labelbottom=False, labeltop=False, labelleft=False, labelright=False)
-        plt.title('Original Image')
-        plt.subplot(1, 2, 2)
-        plt.imshow(new_image)
-        plt.tick_params(axis='both', which='both',top=False, bottom=False, left=False, right=False,labelbottom=False, labeltop=False, labelleft=False, labelright=False)
-        plt.title('Cropped Image')
-        plt.show()
-    
-    return new_image
 
 
 def load_data(dir_list, image_size):
@@ -169,12 +192,7 @@ def plot_sample_images(X, y, n=40):
         plt.show()
 
 
-def split_data(X, y, test_size=0.2):
-       
-    X_train, X_test_val, y_train, y_test_val = train_test_split(X, y, test_size=test_size)
-    X_test, X_val, y_test, y_val = train_test_split(X_test_val, y_test_val, test_size=0.5)
-    
-    return X_train, y_train, X_val, y_val, X_test, y_test
+
 
 
 def plot_metrics(history):
@@ -199,3 +217,4 @@ def plot_metrics(history):
     plt.title('Accuracy')
     plt.legend()
     plt.show()
+"""
