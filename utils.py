@@ -82,7 +82,7 @@ def split_data(X, y, test_size=0.2):
 
     return X_train, y_train, X_test, y_test
 
-def augment_data(X,y):
+def augment_data(X,y, IMG_SIZE=224):
     data_augmentation = tf.keras.Sequential([
       tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
       tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
@@ -95,7 +95,7 @@ def augment_data(X,y):
         new_images.append(image)
         new_labels.append(label)
         
-        new_images.append(np.reshape(data_augmentation(tf.expand_dims(X[0], 0)), (224,224)))
+        new_images.append(np.reshape(data_augmentation(tf.expand_dims(X[0], 0)), (IMG_SIZE,IMG_SIZE)))
         new_labels.append(label)
     
     return np.array(new_images), np.array(new_labels) 
