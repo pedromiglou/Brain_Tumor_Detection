@@ -6,7 +6,6 @@ import cv2
 import imutils    
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.utils import shuffle #shuffling the data improves the model
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 
@@ -29,13 +28,13 @@ def read_images():
         images.append(img_array)
         labels.append(0)
 
-    return np.array(images), np.array(labels)
+    return images, np.array(labels)
 
 
-def crop_images(images):
-    new_images = []
-    
-    for image in images:
+def crop_images(images, IMG_SIZE=None):
+    for i in range(len(images)):
+        image = images[i]
+        
         # blur the image slightly
         blurred = cv2.GaussianBlur(image, (5, 5), 0)
 
@@ -55,32 +54,32 @@ def crop_images(images):
         extBot = tuple(c[c[:, :, 1].argmax()][0])
 
         # crop new image out of the original image using the four extreme points (left, right, top, bottom)
-        new_image = image[extTop[1]:extBot[1], extLeft[0]:extRight[0]]
+        # if IMG_SIZE is provided, it will resize the image and assume the input was a np array
+        if IMG_SIZE:
+            images[i,:,:] = cv2.resize(image[extTop[1]:extBot[1], extLeft[0]:extRight[0]], (IMG_SIZE, IMG_SIZE))
+        else:
+            images[i] = image[extTop[1]:extBot[1], extLeft[0]:extRight[0]]
     
-        new_images.append(new_image)
-    
-    return np.array(new_images)
+    return images
 
 
-def resize_and_rescale(images, IMG_SIZE=224):    
-    new_images = []
-
-    for image in images:
+def resize_and_rescale(images, IMG_SIZE=224):
+    for i in range(len(images)):
         #resize to be smaller to have less data
-        new_image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
+        images[i] = cv2.resize(images[i], (IMG_SIZE, IMG_SIZE))
 
         #normalize data
-        new_image = new_image/255.0
+        #images[i] = images[i]/255.0
     
-        new_images.append(new_image)
-    
-    return np.array(new_images)
+    # convert to numpy array now that all images have the same size
+    return np.array(images)
 
 
 def split_data(X, y, test_size=0.2):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
 
     return X_train, y_train, X_test, y_test
+
 
 def augment_data(X,y, IMG_SIZE=224):
     data_augmentation = tf.keras.Sequential([
@@ -95,10 +94,10 @@ def augment_data(X,y, IMG_SIZE=224):
         new_images.append(image)
         new_labels.append(label)
         
-        new_images.append(np.reshape(data_augmentation(tf.expand_dims(X[0], 0)), (IMG_SIZE,IMG_SIZE)))
+        new_images.append(np.reshape(data_augmentation(tf.expand_dims(image, 0)), image.shape))
         new_labels.append(label)
     
-    return np.array(new_images), np.array(new_labels) 
+    return np.array(new_images), np.array(new_labels)
 
 
 """
