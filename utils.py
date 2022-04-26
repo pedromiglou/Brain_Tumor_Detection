@@ -63,13 +63,14 @@ def crop_images(images, IMG_SIZE=None):
     return images
 
 
-def resize_and_rescale(images, IMG_SIZE=224):
+def resize_and_rescale(images, IMG_SIZE=224, rescale=True):
     for i in range(len(images)):
         #resize to be smaller to have less data
         images[i] = cv2.resize(images[i], (IMG_SIZE, IMG_SIZE))
 
         #normalize data
-        #images[i] = images[i]/255.0
+        if rescale:
+            images[i] = images[i]/255.0
     
     # convert to numpy array now that all images have the same size
     return np.array(images)
@@ -92,6 +93,9 @@ def augment_data(X,y, IMG_SIZE=224):
     
     for image, label in zip(X,y):
         new_images.append(image)
+        new_labels.append(label)
+        
+        new_images.append(np.reshape(data_augmentation(tf.expand_dims(image, 0)), image.shape))
         new_labels.append(label)
         
         new_images.append(np.reshape(data_augmentation(tf.expand_dims(image, 0)), image.shape))
