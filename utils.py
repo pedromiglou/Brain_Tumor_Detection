@@ -1,13 +1,14 @@
 import glob
 import cv2
-from keras.preprocessing.image import ImageDataGenerator
-from os import listdir
+#from keras.preprocessing.image import ImageDataGenerator
+#from os import listdir
 import cv2
 import imutils    
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
+from sklearn.metrics import confusion_matrix
 
 
 def read_images():
@@ -63,7 +64,7 @@ def crop_images(images, IMG_SIZE=None):
     return images
 
 
-def resize_and_rescale(images, IMG_SIZE=224, rescale=True):
+def resize_and_rescale(images, IMG_SIZE=150, rescale=True):
     for i in range(len(images)):
         #resize to be smaller to have less data
         images[i] = cv2.resize(images[i], (IMG_SIZE, IMG_SIZE))
@@ -76,7 +77,7 @@ def resize_and_rescale(images, IMG_SIZE=224, rescale=True):
     return np.array(images)
 
 
-def split_data(X, y, test_size=0.2):
+def split_and_shuffle(X, y, test_size=0.2):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
 
     return X_train, y_train, X_test, y_test
@@ -95,13 +96,41 @@ def augment_data(X,y, IMG_SIZE=224):
         new_images.append(image)
         new_labels.append(label)
         
-        new_images.append(np.reshape(data_augmentation(tf.expand_dims(image, 0)), image.shape))
-        new_labels.append(label)
-        
-        new_images.append(np.reshape(data_augmentation(tf.expand_dims(image, 0)), image.shape))
+        new_images.append(np.reshape(data_augmentation(tf.expand_dims(image, 0), training=True), image.shape))
         new_labels.append(label)
     
     return np.array(new_images), np.array(new_labels)
+
+
+def plot_accuracy_comparison(acc, val_acc):
+    epochs = len(acc)
+    plt.figure(figsize = (10,5))
+    plt.plot(range(1, epochs+1), acc, label="Training Accuracy")
+    plt.plot(range(1, epochs+1), val_acc, label="Validation Accuracy")
+    plt.xticks(range(1, epochs+1))
+    plt.title("Training/Validation Accuracy Comparison")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.show()
+
+
+def plot_loss_comparison(loss, val_loss):
+    epochs = len(loss)
+    plt.figure(figsize = (10,5))
+    plt.plot(range(1, epochs+1), loss, label="Training Loss")
+    plt.plot(range(1, epochs+1), val_loss, label="Validation Loss")
+    plt.xticks(range(1, epochs+1))
+    plt.title("Training/Validation Loss Comparison")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.show()
+
+
+def plot_confusion_matrix(y_test, y_pred):
+    plt.matshow(confusion_matrix(y_test, y_pred))
+    plt.ylabel("Predicted Category", fontsize=14)
+    plt.title("Category", fontsize=14)
+    plt.show()
 
 
 """
