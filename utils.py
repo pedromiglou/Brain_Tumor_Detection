@@ -77,10 +77,12 @@ def resize_and_rescale(images, IMG_SIZE=150, rescale=True):
     return np.array(images)
 
 
-def split_and_shuffle(X, y, test_size=0.2):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
+def split_and_shuffle(X, y):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25)
 
-    return X_train, y_train, X_test, y_test
+    return X_train, y_train, X_val, y_val, X_test, y_test
 
 
 def augment_data(X,y, IMG_SIZE=224):
@@ -102,25 +104,29 @@ def augment_data(X,y, IMG_SIZE=224):
     return np.array(new_images), np.array(new_labels)
 
 
-def plot_accuracy_comparison(acc, val_acc):
-    epochs = len(acc)
+def plot_accuracy_comparison(accs, title, legend):
+    epochs = len(accs[0])
     plt.figure(figsize = (10,5))
-    plt.plot(range(1, epochs+1), acc, label="Training Accuracy")
-    plt.plot(range(1, epochs+1), val_acc, label="Validation Accuracy")
+    for acc in accs:
+        plt.plot(range(1, epochs+1), acc)
+
     plt.xticks(range(1, epochs+1))
-    plt.title("Training/Validation Accuracy Comparison")
+    plt.title(title)
+    plt.legend(legend)
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
     plt.show()
 
 
-def plot_loss_comparison(loss, val_loss):
-    epochs = len(loss)
+def plot_loss_comparison(losses, title, legend):
+    epochs = len(losses[0])
     plt.figure(figsize = (10,5))
-    plt.plot(range(1, epochs+1), loss, label="Training Loss")
-    plt.plot(range(1, epochs+1), val_loss, label="Validation Loss")
+    for loss in losses:
+        plt.plot(range(1, epochs+1), loss)
+
     plt.xticks(range(1, epochs+1))
-    plt.title("Training/Validation Loss Comparison")
+    plt.title(title)
+    plt.legend(legend)
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.show()
