@@ -87,7 +87,7 @@ def split_and_shuffle(X, y):
 
 def augment_data(X,y, IMG_SIZE=224):
     data_augmentation = tf.keras.Sequential([
-      tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal_and_vertical"),
+      tf.keras.layers.experimental.preprocessing.RandomFlip("horizontal"),
       tf.keras.layers.experimental.preprocessing.RandomRotation(0.2),
     ])
     
